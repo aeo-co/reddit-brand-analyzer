@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reddit Brand Analyzer</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222222;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f0;
+    --muted: #888;
+    --muted2: #555;
+    --accent: #ff4500;
+    --accent-dim: rgba(255,69,0,0.15);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Layout */
+  .shell { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+
+  /* Header */
+  .header { margin-bottom: 40px; }
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
+  .logo span { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .header p { color: var(--muted); font-size: 14px; }
+
+  /* Input section */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 32px;
+  }
+  .input-row { display: flex; gap: 10px; }
+  .url-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 14px;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .url-input::placeholder { color: var(--muted2); }
+  .url-input:focus { border-color: var(--accent); }
+  .btn-analyze {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 24px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s, transform 0.1s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-analyze:hover { opacity: 0.88; }
+  .btn-analyze:active { transform: scale(0.97); }
+  .btn-analyze:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+  .webhook-toggle {
+    margin-top: 14px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .webhook-toggle button {
+    background: none; border: none; color: var(--muted); font-size: 12px;
+    cursor: pointer; text-decoration: underline; padding: 0;
+  }
+  .webhook-field {
+    margin-top: 10px;
+    display: none;
+  }
+  .webhook-field.open { display: block; }
+  .webhook-field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
+  .webhook-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+  }
+  .webhook-input:focus { border-color: var(--accent); }
+  .webhook-hint { font-size: 11px; color: var(--muted2); margin-top: 5px; }
+  .webhook-hint code { font-family: monospace; background: var(--surface2); padding: 1px 5px; border-radius: 4px; }
+
+  /* States */
+  .state-box {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-size: 14px;
+    display: none;
+  }
+  .state-box.visible { display: block; }
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto 14px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-box {
+    background: rgba(220,50,50,0.1);
+    border: 1px solid rgba(220,50,50,0.25);
+    border-radius: var(--radius-sm);
+    color: #f88;
+    font-size: 13px;
+    padding: 12px 14px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .error-box.visible { display: block; }
+
+  /* Results */
+  #results { display: none; }
+  #results.visible { display: block; }
+
+  .thread-banner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .thread-banner strong { color: var(--text); font-weight: 500; }
+
+  /* Summary pills */
+  .summary-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .pill {
+    border-radius: 99px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .pill-pos  { background: rgba(74,163,74,0.15);  color: #6dca6d; border-color: rgba(74,163,74,0.3); }
+  .pill-neg  { background: rgba(220,60,60,0.15);  color: #f07070; border-color: rgba(220,60,60,0.3); }
+  .pill-neu  { background: rgba(140,140,140,0.12); color: #aaa;    border-color: rgba(140,140,140,0.25); }
+  .pill-mix  { background: rgba(230,160,40,0.15); color: #e6b84a; border-color: rgba(230,160,40,0.3); }
+
+  /* Sort bar */
+  .sort-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .sort-bar span { font-size: 13px; color: var(--muted); }
+  .sort-btn {
+    background: none;
+    border: 1px solid var(--border2);
+    border-radius: 99px;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 3px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .sort-btn:hover { border-color: var(--accent); color: var(--text); }
+  .sort-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  /* Brand cards */
+  .brand-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .brand-card:hover { border-color: var(--border2); }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px; gap: 12px; flex-wrap: wrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  .card-left { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    flex-shrink: 0;
+    font-family: monospace;
+  }
+  .brand-name { font-weight: 600; font-size: 15px; }
+  .mention-count { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .card-right { display: flex; align-items: center; gap: 10px; }
+  .sentiment-badge {
+    border-radius: 99px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .s-Positive { background: rgba(74,163,74,0.15);  color: #6dca6d; border-color: rgba(74,163,74,0.3); }
+  .s-Negative { background: rgba(220,60,60,0.15);  color: #f07070; border-color: rgba(220,60,60,0.3); }
+  .s-Neutral  { background: rgba(140,140,140,0.12); color: #aaa;    border-color: rgba(140,140,140,0.25); }
+  .s-Mixed    { background: rgba(230,160,40,0.15); color: #e6b84a; border-color: rgba(230,160,40,0.3); }
+
+  .chevron {
+    width: 18px; height: 18px; color: var(--muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .card-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 16px 18px;
+  }
+  .card-body.open { display: block; }
+
+  .consensus {
+    font-size: 14px; color: var(--muted); line-height: 1.65;
+    margin-bottom: 14px;
+  }
+  .quotes-label { font-size: 11px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+  .quote {
+    border-left: 2px solid var(--accent);
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.55;
+    margin-bottom: 8px;
+    background: var(--accent-dim);
+    border-radius: 0 6px 6px 0;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 20 20"><path d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm5.29 9.38a1.5 1.5 0 0 1 .21.77c0 2.77-3.13 5.02-7 5.02s-7-2.25-7-5.02c0-.28.08-.55.21-.77a1.25 1.25 0 1 1 1.63-1.86c.97-.65 2.3-1.06 3.76-1.1l.7-3.11a.3.3 0 0 1 .36-.23l2.19.47a.88.88 0 1 1-.09.6l-1.94-.42-.61 2.73c1.41.07 2.69.47 3.64 1.1a1.25 1.25 0 1 1 1.94 1.82zM7.5 10a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2.28 3.5c-.43 0-.87-.1-1.22-.3a.25.25 0 0 1 .25-.43c.57.33 1.37.33 1.94 0a.25.25 0 0 1 .25.43c-.35.2-.79.3-1.22.3z"/></svg>
+      </div>
+      <span>Reddit Brand Analyzer</span>
+    </div>
+    <p>Drop any Reddit thread URL and instantly see which brands are being talked about, how users feel about them, and what they're actually saying — powered by AI analysis.</p>
+  </div>
+
+  <!-- Input -->
+  <div class="input-card">
+    <div class="input-row">
+      <input id="urlInput" class="url-input" type="text" placeholder="https://www.reddit.com/r/…" />
+      <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Analyze
+      </button>
+    </div>
+
+
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Loading -->
+  <div class="state-box" id="loadingBox">
+    <div class="spinner"></div>
+    Waiting for n8n to process the thread…
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="thread-banner" id="threadBanner" style="display:none"></div>
+    <div class="summary-row" id="summaryRow"></div>
+    <div class="sort-bar">
+      <span id="brandCount"></span>
+      <button class="sort-btn active" onclick="setSort('mentions', this)">mentions</button>
+      <button class="sort-btn" onclick="setSort('name', this)">name</button>
+      <button class="sort-btn" onclick="setSort('sentiment', this)">sentiment</button>
+    </div>
+    <div id="brandList"></div>
+  </div>
+
+</div>
+
+<script>
+const WEBHOOK_URL = 'https://n8n-smartmarketer.duckdns.org/webhook/6d097183-eac3-412e-93de-5a33eca461d9';
+
+let currentBrands = [];
+let currentSort = 'mentions';
+
+async function runAnalysis() {
+  const url = document.getElementById('urlInput').value.trim();
+  const webhook = WEBHOOK_URL;
+  if (!url) return;
+
+  setLoading(true);
+  hideError();
+  hideResults();
+
+  try {
+    const res = await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    if (!res.ok) throw new Error(`Webhook returned HTTP ${res.status}`);
+    const data = await res.json();
+
+    const raw = Array.isArray(data) ? data : (data.output ?? data.brands ?? data.result ?? data);
+    const brands = Array.isArray(raw) && raw[0]?.json ? raw.map(item => item.json) : raw;
+    if (!Array.isArray(brands)) throw new Error('Unexpected response format — expected a JSON array.');
+
+    const title = data.title ?? data.thread_title ?? '';
+    currentBrands = brands;
+    renderResults(brands, title);
+  } catch (e) {
+    showError(e.message || 'Could not reach the webhook. Check the URL and try again.');
+  }
+  setLoading(false);
+}
+
+function setLoading(on) {
+  document.getElementById('analyzeBtn').disabled = on;
+  document.getElementById('analyzeBtn').innerHTML = on
+    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Analyzing…'
+    : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Analyze';
+  document.getElementById('loadingBox').className = 'state-box' + (on ? ' visible' : '');
+}
+
+function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = msg; b.className = 'error-box visible'; }
+function hideError() { document.getElementById('errorBox').className = 'error-box'; }
+function hideResults() { document.getElementById('results').style.display = 'none'; }
+
+function renderResults(brands, title) {
+  const el = document.getElementById('results');
+  el.style.display = 'block';
+
+  // Thread banner
+  const banner = document.getElementById('threadBanner');
+  if (title) { banner.innerHTML = `<strong>Thread:</strong> ${esc(title)}`; banner.style.display = 'block'; }
+  else banner.style.display = 'none';
+
+  renderSummary(brands);
+  document.getElementById('brandCount').textContent = `${brands.length} brand${brands.length !== 1 ? 's' : ''} found — sort by`;
+  renderCards();
+}
+
+function renderSummary(brands) {
+  const counts = { Positive: 0, Negative: 0, Neutral: 0, Mixed: 0 };
+  brands.forEach(b => { if (counts[b.sentiment] !== undefined) counts[b.sentiment]++; });
+  const map = { Positive: 'pill-pos', Negative: 'pill-neg', Neutral: 'pill-neu', Mixed: 'pill-mix' };
+  document.getElementById('summaryRow').innerHTML = Object.entries(counts)
+    .map(([s, n]) => `<span class="pill ${map[s]}">${n} ${s}</span>`).join('');
+}
+
+function setSort(by, btn) {
+  currentSort = by;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCards();
+}
+
+function renderCards() {
+  const sorted = [...currentBrands].sort((a, b) =>
+    currentSort === 'mentions' ? b.mention_count - a.mention_count :
+    currentSort === 'name' ? a.brand_name.localeCompare(b.brand_name) :
+    a.sentiment.localeCompare(b.sentiment)
+  );
+  document.getElementById('brandList').innerHTML = sorted.map((b, i) => cardHTML(b, i)).join('');
+}
+
+function cardHTML(b, i) {
+  const initials = b.brand_name.slice(0, 2).toUpperCase();
+  let rawQuotes = b.evidence_quotes || [];
+  if (typeof rawQuotes === 'string') rawQuotes = rawQuotes.split('|').map(q => q.trim()).filter(Boolean);
+  const quotes = rawQuotes.map(q => `<div class="quote">"${esc(q)}"</div>`).join('');
+  return `
+  <div class="brand-card">
+    <div class="card-header" onclick="toggleCard(${i})">
+      <div class="card-left">
+        <div class="avatar">${initials}</div>
+        <div>
+          <div class="brand-name">${esc(b.brand_name)}</div>
+          <div class="mention-count">${b.mention_count} mention${b.mention_count !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      <div class="card-right">
+        <span class="sentiment-badge s-${b.sentiment}">${b.sentiment}</span>
+        <svg class="chevron" id="chev-${i}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+    <div class="card-body" id="body-${i}">
+      <p class="consensus">${esc(b.user_consensus)}</p>
+      ${quotes ? `<div class="quotes-label">Evidence quotes</div>${quotes}` : ''}
+    </div>
+  </div>`;
+}
+
+function toggleCard(i) {
+  const body = document.getElementById(`body-${i}`);
+  const chev = document.getElementById(`chev-${i}`);
+  const open = body.classList.toggle('open');
+  chev.style.transform = open ? 'rotate(180deg)' : '';
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') runAnalysis(); });
+</script>
+</body>
+</html>

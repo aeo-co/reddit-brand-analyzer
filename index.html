@@ -3,439 +3,501 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Reddit Brand Analyzer</title>
+<title>Reddit Intelligence Tool</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg: #0f0f0f;
-    --surface: #1a1a1a;
-    --surface2: #222222;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.14);
-    --text: #f0f0f0;
-    --muted: #888;
-    --muted2: #555;
-    --accent: #ff4500;
-    --accent-dim: rgba(255,69,0,0.15);
-    --radius: 12px;
-    --radius-sm: 8px;
+    --bg: #0f0f0f; --surface: #1a1a1a; --surface2: #222;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #f0f0f0; --muted: #888; --muted2: #555;
+    --accent: #ff4500; --accent-dim: rgba(255,69,0,0.12);
+    --radius: 12px; --radius-sm: 8px;
   }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 15px;
-    line-height: 1.6;
-    min-height: 100vh;
-  }
-
-  /* Layout */
-  .shell { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
+  .shell { max-width: 800px; margin: 0 auto; padding: 40px 24px 80px; }
 
   /* Header */
-  .header { margin-bottom: 40px; }
-  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .header { margin-bottom: 32px; }
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
   .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
   .logo-icon svg { width: 18px; height: 18px; fill: #fff; }
   .logo span { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
   .header p { color: var(--muted); font-size: 14px; }
 
-  /* Input section */
-  .input-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    margin-bottom: 32px;
-  }
-  .input-row { display: flex; gap: 10px; }
-  .url-input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-size: 14px;
-    padding: 11px 14px;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-  .url-input::placeholder { color: var(--muted2); }
-  .url-input:focus { border-color: var(--accent); }
-  .btn-analyze {
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    font-weight: 600;
-    padding: 11px 24px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: opacity 0.15s, transform 0.1s;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .btn-analyze:hover { opacity: 0.88; }
-  .btn-analyze:active { transform: scale(0.97); }
-  .btn-analyze:disabled { opacity: 0.4; cursor: default; transform: none; }
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: 28px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
+  .tab-btn { background: none; border: none; color: var(--muted); font-size: 13px; font-weight: 500; padding: 7px 18px; border-radius: 9px; cursor: pointer; transition: all 0.15s; }
+  .tab-btn.active { background: var(--accent); color: #fff; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
-  .webhook-toggle {
-    margin-top: 14px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .webhook-toggle button {
-    background: none; border: none; color: var(--muted); font-size: 12px;
-    cursor: pointer; text-decoration: underline; padding: 0;
-  }
-  .webhook-field {
-    margin-top: 10px;
-    display: none;
-  }
-  .webhook-field.open { display: block; }
-  .webhook-field label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 5px; }
-  .webhook-input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border2);
-    border-radius: var(--radius-sm);
-    color: var(--text);
-    font-size: 13px;
-    padding: 9px 12px;
-    outline: none;
-  }
-  .webhook-input:focus { border-color: var(--accent); }
-  .webhook-hint { font-size: 11px; color: var(--muted2); margin-top: 5px; }
-  .webhook-hint code { font-family: monospace; background: var(--surface2); padding: 1px 5px; border-radius: 4px; }
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; }
 
-  /* States */
-  .state-box {
-    text-align: center;
-    padding: 48px 24px;
-    color: var(--muted);
-    font-size: 14px;
-    display: none;
+  /* Form elements */
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  input[type=text], textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--border2); border-radius: var(--radius-sm);
+    color: var(--text); font-size: 14px; padding: 10px 14px; outline: none; transition: border-color 0.15s;
+    font-family: inherit;
   }
+  input[type=text]:focus, textarea:focus { border-color: var(--accent); }
+  input[type=text]::placeholder, textarea::placeholder { color: var(--muted2); }
+  textarea { resize: vertical; line-height: 1.5; }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 600; padding: 11px 24px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px; transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-primary:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .btn-secondary {
+    background: none; border: 1px solid var(--border2); color: var(--muted); border-radius: var(--radius-sm);
+    font-size: 13px; padding: 7px 16px; cursor: pointer; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+
+  /* State boxes */
+  .state-box { text-align: center; padding: 48px 24px; color: var(--muted); font-size: 14px; display: none; }
   .state-box.visible { display: block; }
-  .spinner {
-    width: 28px; height: 28px;
-    border: 2px solid var(--border2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    margin: 0 auto 14px;
-  }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 14px; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .error-box {
-    background: rgba(220,50,50,0.1);
-    border: 1px solid rgba(220,50,50,0.25);
-    border-radius: var(--radius-sm);
-    color: #f88;
-    font-size: 13px;
-    padding: 12px 14px;
-    margin-bottom: 20px;
-    display: none;
-  }
+  .error-box { background: rgba(220,50,50,0.1); border: 1px solid rgba(220,50,50,0.25); border-radius: var(--radius-sm); color: #f88; font-size: 13px; padding: 12px 14px; margin-bottom: 16px; display: none; }
   .error-box.visible { display: block; }
 
-  /* Results */
-  #results { display: none; }
-  #results.visible { display: block; }
-
-  .thread-banner {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius-sm);
-    padding: 10px 14px;
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 20px;
-  }
+  /* ── Brand Analyzer styles ── */
+  .thread-banner { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px; color: var(--muted); margin-bottom: 16px; }
   .thread-banner strong { color: var(--text); font-weight: 500; }
-
-  /* Summary pills */
-  .summary-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
-  .pill {
-    border-radius: 99px;
-    padding: 5px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid transparent;
-  }
-  .pill-pos  { background: rgba(74,163,74,0.15);  color: #6dca6d; border-color: rgba(74,163,74,0.3); }
-  .pill-neg  { background: rgba(220,60,60,0.15);  color: #f07070; border-color: rgba(220,60,60,0.3); }
-  .pill-neu  { background: rgba(140,140,140,0.12); color: #aaa;    border-color: rgba(140,140,140,0.25); }
-  .pill-mix  { background: rgba(230,160,40,0.15); color: #e6b84a; border-color: rgba(230,160,40,0.3); }
-
-  /* Sort bar */
-  .sort-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .summary-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pill { border-radius: 99px; padding: 5px 14px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+  .pill-pos { background: rgba(74,163,74,0.15); color: #6dca6d; border-color: rgba(74,163,74,0.3); }
+  .pill-neg { background: rgba(220,60,60,0.15); color: #f07070; border-color: rgba(220,60,60,0.3); }
+  .pill-neu { background: rgba(140,140,140,0.12); color: #aaa; border-color: rgba(140,140,140,0.25); }
+  .pill-mix { background: rgba(230,160,40,0.15); color: #e6b84a; border-color: rgba(230,160,40,0.3); }
+  .sort-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .sort-bar span { font-size: 13px; color: var(--muted); }
-  .sort-btn {
-    background: none;
-    border: 1px solid var(--border2);
-    border-radius: 99px;
-    color: var(--muted);
-    font-size: 12px;
-    padding: 3px 12px;
-    cursor: pointer;
-    transition: all 0.15s;
-  }
+  .sort-btn { background: none; border: 1px solid var(--border2); border-radius: 99px; color: var(--muted); font-size: 12px; padding: 3px 12px; cursor: pointer; transition: all 0.15s; }
   .sort-btn:hover { border-color: var(--accent); color: var(--text); }
   .sort-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-
-  /* Brand cards */
-  .brand-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 12px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-  }
+  .brand-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; transition: border-color 0.15s; }
   .brand-card:hover { border-color: var(--border2); }
-
-  .card-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 18px; gap: 12px; flex-wrap: wrap;
-    cursor: pointer;
-    user-select: none;
-  }
+  .card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; gap: 12px; flex-wrap: wrap; cursor: pointer; user-select: none; }
   .card-left { display: flex; align-items: center; gap: 12px; }
-  .avatar {
-    width: 40px; height: 40px; border-radius: 10px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 600; color: var(--muted);
-    flex-shrink: 0;
-    font-family: monospace;
-  }
-  .brand-name { font-weight: 600; font-size: 15px; }
-  .mention-count { font-size: 12px; color: var(--muted); margin-top: 1px; }
-
-  .card-right { display: flex; align-items: center; gap: 10px; }
-  .sentiment-badge {
-    border-radius: 99px;
-    padding: 3px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid transparent;
-  }
-  .s-Positive { background: rgba(74,163,74,0.15);  color: #6dca6d; border-color: rgba(74,163,74,0.3); }
-  .s-Negative { background: rgba(220,60,60,0.15);  color: #f07070; border-color: rgba(220,60,60,0.3); }
-  .s-Neutral  { background: rgba(140,140,140,0.12); color: #aaa;    border-color: rgba(140,140,140,0.25); }
+  .avatar { width: 38px; height: 38px; border-radius: 9px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--muted); flex-shrink: 0; font-family: monospace; }
+  .brand-name { font-weight: 600; font-size: 14px; }
+  .mention-count { font-size: 12px; color: var(--muted); }
+  .card-right { display: flex; align-items: center; gap: 8px; }
+  .sentiment-badge { border-radius: 99px; padding: 3px 12px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+  .s-Positive { background: rgba(74,163,74,0.15); color: #6dca6d; border-color: rgba(74,163,74,0.3); }
+  .s-Negative { background: rgba(220,60,60,0.15); color: #f07070; border-color: rgba(220,60,60,0.3); }
+  .s-Neutral  { background: rgba(140,140,140,0.12); color: #aaa; border-color: rgba(140,140,140,0.25); }
   .s-Mixed    { background: rgba(230,160,40,0.15); color: #e6b84a; border-color: rgba(230,160,40,0.3); }
-
-  .chevron {
-    width: 18px; height: 18px; color: var(--muted);
-    transition: transform 0.2s;
-    flex-shrink: 0;
-  }
-  .card-body {
-    display: none;
-    border-top: 1px solid var(--border);
-    padding: 16px 18px;
-  }
+  .chevron { width: 16px; height: 16px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+  .card-body { display: none; border-top: 1px solid var(--border); padding: 14px 16px; }
   .card-body.open { display: block; }
-
-  .consensus {
-    font-size: 14px; color: var(--muted); line-height: 1.65;
-    margin-bottom: 14px;
-  }
+  .consensus { font-size: 14px; color: var(--muted); line-height: 1.65; margin-bottom: 12px; }
   .quotes-label { font-size: 11px; font-weight: 600; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
-  .quote {
-    border-left: 2px solid var(--accent);
-    padding: 6px 12px;
-    font-size: 13px;
-    color: var(--muted);
-    font-style: italic;
-    line-height: 1.55;
-    margin-bottom: 8px;
-    background: var(--accent-dim);
-    border-radius: 0 6px 6px 0;
-  }
+  .quote { border-left: 2px solid var(--accent); padding: 6px 12px; font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.55; margin-bottom: 8px; background: var(--accent-dim); border-radius: 0 6px 6px 0; }
+
+  /* ── AEO styles ── */
+  .step-indicator { display: flex; align-items: center; gap: 0; margin-bottom: 24px; }
+  .step { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted2); }
+  .step.active { color: var(--accent); }
+  .step.done { color: #6dca6d; }
+  .step-dot { width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .step-line { flex: 1; height: 1px; background: var(--border2); margin: 0 6px; max-width: 40px; }
+
+  .taxonomy-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tax-pill { background: var(--surface2); border: 1px solid var(--border2); border-radius: 99px; padding: 4px 12px; font-size: 12px; color: var(--muted); }
+  .tax-pill.highlight { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+  .aeo-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .aeo-controls-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-btn { background: none; border: 1px solid var(--border2); border-radius: 99px; color: var(--muted); font-size: 12px; padding: 4px 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+  .question-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; transition: border-color 0.15s; }
+  .question-card:hover { border-color: var(--border2); }
+  .q-category { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); margin-bottom: 6px; }
+  .q-text { font-size: 14px; color: var(--text); line-height: 1.55; margin-bottom: 8px; }
+  .q-meta { display: flex; align-items: center; gap: 10px; }
+  .q-source { font-size: 11px; color: var(--muted2); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 400px; }
+  .q-source:hover { color: var(--accent); }
+
+  .export-bar { display: flex; gap: 8px; margin-top: 16px; }
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
+  .stat-val { font-size: 24px; font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 4px; }
+  .stat-label { font-size: 12px; color: var(--muted); }
 </style>
 </head>
 <body>
 <div class="shell">
 
-  <!-- Header -->
   <div class="header">
     <div class="logo">
       <div class="logo-icon">
         <svg viewBox="0 0 20 20"><path d="M10 0C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0zm5.29 9.38a1.5 1.5 0 0 1 .21.77c0 2.77-3.13 5.02-7 5.02s-7-2.25-7-5.02c0-.28.08-.55.21-.77a1.25 1.25 0 1 1 1.63-1.86c.97-.65 2.3-1.06 3.76-1.1l.7-3.11a.3.3 0 0 1 .36-.23l2.19.47a.88.88 0 1 1-.09.6l-1.94-.42-.61 2.73c1.41.07 2.69.47 3.64 1.1a1.25 1.25 0 1 1 1.94 1.82zM7.5 10a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm5 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2.28 3.5c-.43 0-.87-.1-1.22-.3a.25.25 0 0 1 .25-.43c.57.33 1.37.33 1.94 0a.25.25 0 0 1 .25.43c-.35.2-.79.3-1.22.3z"/></svg>
       </div>
-      <span>Reddit Brand Analyzer</span>
+      <span>Reddit Intelligence Tool</span>
     </div>
     <p>Drop any Reddit thread URL and instantly see which brands are being talked about, how users feel about them, and what they're actually saying — powered by AI analysis.</p>
   </div>
 
-  <!-- Input -->
-  <div class="input-card">
-    <div class="input-row">
-      <input id="urlInput" class="url-input" type="text" placeholder="https://www.reddit.com/r/…" />
-      <button class="btn-analyze" id="analyzeBtn" onclick="runAnalysis()">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('brand', this)">Brand Analyzer</button>
+    <button class="tab-btn" onclick="switchTab('aeo', this)">AEO Extractor</button>
+  </div>
+
+  <!-- ═══════════════ BRAND ANALYZER TAB ═══════════════ -->
+  <div class="tab-panel active" id="tab-brand">
+    <div class="card">
+      <div class="field">
+        <label>Reddit Thread URLs <span style="color:var(--muted2);font-size:11px;text-transform:none;letter-spacing:0">(comma-separated)</span></label>
+        <textarea id="urlInput" placeholder="https://www.reddit.com/r/…, https://www.reddit.com/r/…" rows="3"></textarea>
+      </div>
+      <button class="btn-primary" id="analyzeBtn" onclick="runBrandAnalysis()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         Analyze
       </button>
     </div>
 
+    <div class="error-box" id="brandError"></div>
+    <div class="state-box" id="brandLoading"><div class="spinner"></div>Waiting for n8n to process the thread…</div>
 
-  </div>
-
-  <!-- Error -->
-  <div class="error-box" id="errorBox"></div>
-
-  <!-- Loading -->
-  <div class="state-box" id="loadingBox">
-    <div class="spinner"></div>
-    Waiting for n8n to process the thread…
-  </div>
-
-  <!-- Results -->
-  <div id="results">
-    <div class="thread-banner" id="threadBanner" style="display:none"></div>
-    <div class="summary-row" id="summaryRow"></div>
-    <div class="sort-bar">
-      <span id="brandCount"></span>
-      <button class="sort-btn active" onclick="setSort('mentions', this)">mentions</button>
-      <button class="sort-btn" onclick="setSort('name', this)">name</button>
-      <button class="sort-btn" onclick="setSort('sentiment', this)">sentiment</button>
+    <div id="brandResults" style="display:none">
+      <div class="thread-banner" id="threadBanner" style="display:none"></div>
+      <div class="summary-row" id="summaryRow"></div>
+      <div class="sort-bar">
+        <span id="brandCount"></span>
+        <button class="sort-btn active" onclick="setSort('mentions',this)">mentions</button>
+        <button class="sort-btn" onclick="setSort('name',this)">name</button>
+        <button class="sort-btn" onclick="setSort('sentiment',this)">sentiment</button>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <button class="btn-secondary" onclick="exportBrandCSV()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn-secondary" onclick="exportBrandJSON()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export JSON
+          </button>
+        </div>
+      </div>
+      <div id="brandList"></div>
     </div>
-    <div id="brandList"></div>
+  </div>
+
+  <!-- ═══════════════ AEO EXTRACTOR TAB ═══════════════ -->
+  <div class="tab-panel" id="tab-aeo">
+    <div class="card">
+      <div class="row-2">
+        <div class="field">
+          <label>Client Industry</label>
+          <input type="text" id="aeoIndustry" placeholder="e.g. Mobiles, Pelvic Health, SaaS" />
+        </div>
+        <div class="field">
+          <label>Subreddit</label>
+          <input type="text" id="aeoSubreddits" placeholder="e.g. r/iphone" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Seed Topic</label>
+        <input type="text" id="aeoTopics" placeholder="e.g. iPhone 17 vs 17 pro" />
+      </div>
+      <button class="btn-primary" id="aeoBtn" onclick="runAEO()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Extract Questions
+      </button>
+    </div>
+
+    <div class="error-box" id="aeoError"></div>
+    <div class="state-box" id="aeoLoading"><div class="spinner"></div><span id="aeoLoadingMsg">Sending to n8n…</span></div>
+
+    <div id="aeoResults" style="display:none">
+
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-val" id="statTotal">0</div><div class="stat-label">Questions extracted</div></div>
+        <div class="stat-card"><div class="stat-val" id="statCats">0</div><div class="stat-label">Categories</div></div>
+        <div class="stat-card"><div class="stat-val" id="statSources">0</div><div class="stat-label">Unique threads</div></div>
+      </div>
+
+      <div id="taxonomyBox" style="margin-bottom:20px;display:none">
+        <div style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Generated taxonomy</div>
+        <div class="taxonomy-pills" id="taxonomyPills"></div>
+      </div>
+
+      <div class="aeo-controls">
+        <div class="aeo-controls-left">
+          <span style="font-size:13px;color:var(--muted)" id="aeoCount"></span>
+          <div id="filterBtns" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+        </div>
+        <div class="export-bar">
+          <button class="btn-secondary" onclick="exportCSV()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export CSV
+          </button>
+          <button class="btn-secondary" onclick="exportJSON()">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export JSON
+          </button>
+        </div>
+      </div>
+
+      <div id="questionList"></div>
+    </div>
   </div>
 
 </div>
 
 <script>
-const WEBHOOK_URL = 'https://n8n-smartmarketer.duckdns.org/webhook/6d097183-eac3-412e-93de-5a33eca461d9';
+// ─── WEBHOOK URLS ────────────────────────────────────────────
+const BRAND_WEBHOOK = 'https://n8n-smartmarketer.duckdns.org/webhook/6d097183-eac3-412e-93de-5a33eca461d9';
+const AEO_WEBHOOK   = 'https://n8n-smartmarketer.duckdns.org/webhook/26fddc07-478f-4f0b-aff5-2c3a81994f85';
+// ─────────────────────────────────────────────────────────────
 
-let currentBrands = [];
-let currentSort = 'mentions';
+// ── Tab switching ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
 
-async function runAnalysis() {
-  const url = document.getElementById('urlInput').value.trim();
-  const webhook = WEBHOOK_URL;
-  if (!url) return;
+// ══════════════════════════════════════════
+//  BRAND ANALYZER
+// ══════════════════════════════════════════
+let currentBrands = [], currentSort = 'mentions';
 
-  setLoading(true);
-  hideError();
-  hideResults();
-
+async function runBrandAnalysis() {
+  const raw = document.getElementById('urlInput').value.trim();
+  if (!raw) return;
+  const urls = raw.split(',').map(u => u.trim()).filter(Boolean);
+  setBrandLoading(true); showEl('brandError', false); showEl('brandResults', false);
   try {
-    const res = await fetch(webhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
-    });
+    const res = await fetch(BRAND_WEBHOOK, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ urls }) });
     if (!res.ok) throw new Error(`Webhook returned HTTP ${res.status}`);
     const data = await res.json();
-
-    const raw = Array.isArray(data) ? data : (data.output ?? data.brands ?? data.result ?? data);
-    const brands = Array.isArray(raw) && raw[0]?.json ? raw.map(item => item.json) : raw;
-    if (!Array.isArray(brands)) throw new Error('Unexpected response format — expected a JSON array.');
-
-    const title = data.title ?? data.thread_title ?? '';
+    const rawArr = Array.isArray(data) ? data : (data.output ?? data.brands ?? data.result ?? data);
+    const brands = Array.isArray(rawArr) && rawArr[0]?.json ? rawArr.map(i => i.json) : rawArr;
+    if (!Array.isArray(brands)) throw new Error('Unexpected response format.');
     currentBrands = brands;
-    renderResults(brands, title);
-  } catch (e) {
-    showError(e.message || 'Could not reach the webhook. Check the URL and try again.');
-  }
-  setLoading(false);
+    renderBrandResults(brands, data.title ?? data.thread_title ?? '');
+  } catch(e) { setError('brandError', e.message); }
+  setBrandLoading(false);
 }
 
-function setLoading(on) {
+function setBrandLoading(on) {
   document.getElementById('analyzeBtn').disabled = on;
   document.getElementById('analyzeBtn').innerHTML = on
-    ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Analyzing…'
-    : '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Analyze';
-  document.getElementById('loadingBox').className = 'state-box' + (on ? ' visible' : '');
+    ? spinnerIcon() + ' Analyzing…'
+    : searchIcon() + ' Analyze';
+  document.getElementById('brandLoading').className = 'state-box' + (on ? ' visible' : '');
 }
 
-function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = msg; b.className = 'error-box visible'; }
-function hideError() { document.getElementById('errorBox').className = 'error-box'; }
-function hideResults() { document.getElementById('results').style.display = 'none'; }
-
-function renderResults(brands, title) {
-  const el = document.getElementById('results');
-  el.style.display = 'block';
-
-  // Thread banner
+function renderBrandResults(brands, title) {
+  document.getElementById('brandResults').style.display = 'block';
   const banner = document.getElementById('threadBanner');
-  if (title) { banner.innerHTML = `<strong>Thread:</strong> ${esc(title)}`; banner.style.display = 'block'; }
-  else banner.style.display = 'none';
-
-  renderSummary(brands);
-  document.getElementById('brandCount').textContent = `${brands.length} brand${brands.length !== 1 ? 's' : ''} found — sort by`;
-  renderCards();
-}
-
-function renderSummary(brands) {
+  if (title) { banner.innerHTML = `<strong>Thread:</strong> ${esc(title)}`; banner.style.display = 'block'; } else banner.style.display = 'none';
   const counts = { Positive: 0, Negative: 0, Neutral: 0, Mixed: 0 };
   brands.forEach(b => { if (counts[b.sentiment] !== undefined) counts[b.sentiment]++; });
   const map = { Positive: 'pill-pos', Negative: 'pill-neg', Neutral: 'pill-neu', Mixed: 'pill-mix' };
-  document.getElementById('summaryRow').innerHTML = Object.entries(counts)
-    .map(([s, n]) => `<span class="pill ${map[s]}">${n} ${s}</span>`).join('');
+  document.getElementById('summaryRow').innerHTML = Object.entries(counts).map(([s,n]) => `<span class="pill ${map[s]}">${n} ${s}</span>`).join('');
+  document.getElementById('brandCount').textContent = `${brands.length} brand${brands.length !== 1 ? 's' : ''} found — sort by`;
+  renderBrandCards();
 }
 
 function setSort(by, btn) {
   currentSort = by;
   document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderCards();
+  renderBrandCards();
 }
 
-function renderCards() {
-  const sorted = [...currentBrands].sort((a, b) =>
+function renderBrandCards() {
+  const sorted = [...currentBrands].sort((a,b) =>
     currentSort === 'mentions' ? b.mention_count - a.mention_count :
     currentSort === 'name' ? a.brand_name.localeCompare(b.brand_name) :
-    a.sentiment.localeCompare(b.sentiment)
-  );
-  document.getElementById('brandList').innerHTML = sorted.map((b, i) => cardHTML(b, i)).join('');
-}
-
-function cardHTML(b, i) {
-  const initials = b.brand_name.slice(0, 2).toUpperCase();
-  let rawQuotes = b.evidence_quotes || [];
-  if (typeof rawQuotes === 'string') rawQuotes = rawQuotes.split('|').map(q => q.trim()).filter(Boolean);
-  const quotes = rawQuotes.map(q => `<div class="quote">"${esc(q)}"</div>`).join('');
-  return `
-  <div class="brand-card">
-    <div class="card-header" onclick="toggleCard(${i})">
-      <div class="card-left">
-        <div class="avatar">${initials}</div>
-        <div>
-          <div class="brand-name">${esc(b.brand_name)}</div>
-          <div class="mention-count">${b.mention_count} mention${b.mention_count !== 1 ? 's' : ''}</div>
+    a.sentiment.localeCompare(b.sentiment));
+  document.getElementById('brandList').innerHTML = sorted.map((b,i) => {
+    let rawQ = b.evidence_quotes || [];
+    if (typeof rawQ === 'string') rawQ = rawQ.split('|').map(q => q.trim()).filter(Boolean);
+    const quotes = rawQ.map(q => `<div class="quote">"${esc(q)}"</div>`).join('');
+    return `<div class="brand-card">
+      <div class="card-header" onclick="toggleCard('bc',${i})">
+        <div class="card-left">
+          <div class="avatar">${esc(b.brand_name.slice(0,2).toUpperCase())}</div>
+          <div><div class="brand-name">${esc(b.brand_name)}</div><div class="mention-count">${b.mention_count} mention${b.mention_count !== 1 ? 's' : ''}</div></div>
+        </div>
+        <div class="card-right">
+          <span class="sentiment-badge s-${b.sentiment}">${b.sentiment}</span>
+          <svg class="chevron" id="chev-bc-${i}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
       </div>
-      <div class="card-right">
-        <span class="sentiment-badge s-${b.sentiment}">${b.sentiment}</span>
-        <svg class="chevron" id="chev-${i}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      <div class="card-body" id="body-bc-${i}">
+        <p class="consensus">${esc(b.user_consensus)}</p>
+        ${quotes ? `<div class="quotes-label">Evidence quotes</div>${quotes}` : ''}
       </div>
-    </div>
-    <div class="card-body" id="body-${i}">
-      <p class="consensus">${esc(b.user_consensus)}</p>
-      ${quotes ? `<div class="quotes-label">Evidence quotes</div>${quotes}` : ''}
-    </div>
-  </div>`;
+    </div>`;
+  }).join('');
 }
 
-function toggleCard(i) {
-  const body = document.getElementById(`body-${i}`);
-  const chev = document.getElementById(`chev-${i}`);
+// ══════════════════════════════════════════
+//  AEO EXTRACTOR
+// ══════════════════════════════════════════
+let aeoQuestions = [], aeoFilter = 'all';
+
+async function runAEO() {
+  const industry   = document.getElementById('aeoIndustry').value.trim();
+  const topics     = document.getElementById('aeoTopics').value.trim();
+  const subreddits = document.getElementById('aeoSubreddits').value.trim();
+  if (!industry || !topics) { setError('aeoError', 'Please fill in Client Industry and Seed Topics.'); return; }
+  setAEOLoading(true, 'Working on it…'); showEl('aeoError', false); showEl('aeoResults', false);
+  try {
+    const res = await fetch(AEO_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_industry: industry, seed_topics: topics, subreddits })
+    });
+    if (!res.ok) throw new Error(`Webhook returned HTTP ${res.status}`);
+    const data = await res.json();
+
+    // Unwrap n8n envelope
+    const rawArr = Array.isArray(data) ? data : (data.output ?? data.questions ?? data.result ?? data);
+    const questions = Array.isArray(rawArr) && rawArr[0]?.json ? rawArr.map(i => i.json) : rawArr;
+    if (!Array.isArray(questions)) throw new Error('Unexpected response format — expected a JSON array.');
+
+    // Taxonomy may come back separately
+    const taxonomy = data.taxonomy ?? data.categories ?? [];
+
+    aeoQuestions = questions;
+    aeoFilter = 'all';
+    renderAEOResults(questions, taxonomy);
+  } catch(e) { setError('aeoError', e.message); }
+  setAEOLoading(false);
+}
+
+function setAEOLoading(on, msg) {
+  document.getElementById('aeoBtn').disabled = on;
+  document.getElementById('aeoBtn').innerHTML = on ? spinnerIcon() + ' Processing…' : searchIcon() + ' Extract Questions';
+  const box = document.getElementById('aeoLoading');
+  box.className = 'state-box' + (on ? ' visible' : '');
+  if (msg) document.getElementById('aeoLoadingMsg').textContent = msg;
+}
+
+function renderAEOResults(questions, taxonomy) {
+  document.getElementById('aeoResults').style.display = 'block';
+
+  // Stats
+  const cats = [...new Set(questions.map(q => q.category))];
+  const sources = [...new Set(questions.map(q => q.source_url).filter(Boolean))];
+  document.getElementById('statTotal').textContent = questions.length;
+  document.getElementById('statCats').textContent = cats.length;
+  document.getElementById('statSources').textContent = sources.length;
+
+  // Taxonomy pills
+  if (taxonomy.length) {
+    document.getElementById('taxonomyBox').style.display = 'block';
+    document.getElementById('taxonomyPills').innerHTML = taxonomy.map(t =>
+      `<span class="tax-pill ${cats.includes(t) ? 'highlight' : ''}">${esc(t)}</span>`).join('');
+  }
+
+  // Filter buttons
+  const filterBox = document.getElementById('filterBtns');
+  filterBox.innerHTML = [`<button class="filter-btn active" data-cat="all">All (${questions.length})</button>`,
+    ...cats.map(c => {
+      const n = questions.filter(q => q.category === c).length;
+      return `<button class="filter-btn" data-cat="${esc(c)}">${esc(c)} (${n})</button>`;
+    })].join('');
+  filterBox.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBox.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      aeoFilter = btn.dataset.cat;
+      const filtered = aeoFilter === 'all' ? aeoQuestions : aeoQuestions.filter(q => q.category === aeoFilter);
+      renderQuestions(filtered);
+    });
+  });
+
+  renderQuestions(questions);
+}
+
+function setAEOFilter(cat, btn) {
+  aeoFilter = cat;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const filtered = cat === 'all' ? aeoQuestions : aeoQuestions.filter(q => q.category === cat);
+  renderQuestions(filtered);
+}
+
+function renderQuestions(questions) {
+  document.getElementById('aeoCount').textContent = `${questions.length} question${questions.length !== 1 ? 's' : ''}`;
+  document.getElementById('questionList').innerHTML = questions.map(q => `
+    <div class="question-card">
+      <div class="q-category">${esc(q.category)}</div>
+      <div class="q-text">${esc(q.question_text)}</div>
+      <div class="q-meta">
+        ${q.source_url ? `<a class="q-source" href="${esc(q.source_url)}" target="_blank" rel="noopener">${esc(q.source_url)}</a>` : ''}
+      </div>
+    </div>`).join('') || `<p style="color:var(--muted);font-size:14px;">No questions found in this category.</p>`;
+}
+
+// ── Brand Export ──
+function exportBrandCSV() {
+  const rows = [['brand_name','mention_count','sentiment','user_consensus','evidence_quotes'],
+    ...currentBrands.map(b => {
+      let q = b.evidence_quotes || [];
+      if (typeof q === 'string') q = q.split('|').map(s => s.trim()).filter(Boolean);
+      return [b.brand_name, b.mention_count, b.sentiment, b.user_consensus, q.join(' | ')];
+    })];
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  download('brand_analysis.csv', 'text/csv', csv);
+}
+function exportBrandJSON() {
+  download('brand_analysis.json', 'application/json', JSON.stringify(currentBrands, null, 2));
+}
+
+// ── AEO Export ──
+function getExportData() {
+  return aeoFilter === 'all' ? aeoQuestions : aeoQuestions.filter(q => q.category === aeoFilter);
+}
+function exportCSV() {
+  const data = getExportData();
+  const slug = aeoFilter === 'all' ? 'all' : aeoFilter.toLowerCase().replace(/\s+/g, '_');
+  const rows = [['category','question_text','source_url'], ...data.map(q => [q.category, q.question_text, q.source_url || ''])];
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  download(`aeo_questions_${slug}.csv`, 'text/csv', csv);
+}
+function exportJSON() {
+  const data = getExportData();
+  const slug = aeoFilter === 'all' ? 'all' : aeoFilter.toLowerCase().replace(/\s+/g, '_');
+  download(`aeo_questions_${slug}.json`, 'application/json', JSON.stringify(data, null, 2));
+}
+function download(name, type, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = name; a.click();
+}
+
+// ── Shared utils ──
+function toggleCard(prefix, i) {
+  const body = document.getElementById(`body-${prefix}-${i}`);
+  const chev = document.getElementById(`chev-${prefix}-${i}`);
   const open = body.classList.toggle('open');
   chev.style.transform = open ? 'rotate(180deg)' : '';
 }
-
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') runAnalysis(); });
+function showEl(id, show) { document.getElementById(id).style.display = show ? 'block' : 'none'; }
+function setError(id, msg) { const b = document.getElementById(id); b.textContent = msg; b.className = 'error-box visible'; }
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function spinnerIcon() { return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>`; }
+function searchIcon() { return `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`; }
 </script>
 </body>
 </html>
